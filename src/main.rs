@@ -1,7 +1,8 @@
 use std::path::PathBuf; 
 use structopt::StructOpt;
 use std::fs; 
-
+use std::path::Path; 
+use std::io::Write;
 
 #[derive(StructOpt, Debug)]
 #[structopt(name="my_tech_stack")]
@@ -34,14 +35,35 @@ pub struct InitNewApplication {
   generate_elm_routes: bool 
 }
 
+fn create_mainpy_file(src_path: &Path) -> () {
+  let main_path = src_path.join(Path::new("main.py")); 
+  let mut main_file = fs::File::create(main_path).unwrap(); 
+  main_file.write_all(b"from fastapi import FastAPI\nfrom pydantic import BaseModel\nfrom fastapi.middleware.cors import CORSMiddleware\n\napp = FastAPI()\nclass User(BaseModel):\n\tusername: str\n\temail: str\n\tpassword: str\norigins = ['http://localhost',\n\t'http://localhost:8080'\n]\n\napp.add_middleware(CORSMiddleware,\n\tallow_origins=origins,\n\tallow_credentials=True,allow_methods=['*'],allow_headers=['*']\n)\n
+\n@app.get('/')\ndef main():\n\treturn 'hello world'").unwrap();
+}
+
+fn create_mainelm_file(ui_path: &Path) -> () {
+
+  let main_elm_file_path = ui_path.join(Path::new("main.elm")); 
+  let mut elm_file = fs::File::create(&main_elm_file_path).unwrap(); 
+  elm_file.write_all(b"module Main where").unwrap();
+}
+
 fn initialize_new_application(new_app: &InitNewApplication) -> () {
-  println!("Will generate a new FastAPI project with Pipenv at {:?}", &new_app.app_location);
-      let result = fs::create_dir(&new_app.app_location); 
+  println!("Will generate a new FastAPI project at {:?}", &new_app.app_location);
+      let result = fs::create_dir(&new_app.app_location);
 
       match result {
         Ok(r) => {
           println!("{:?}", r);
-          fs::create_file(&new_app.app_location + "main.py")
+          let src_path = new_app.app_location.as_path().join(Path::new("src")); 
+          let _src_foler = fs::create_dir(&src_path);
+          create_mainpy_file(&src_path); 
+          let ui_path = src_path.join(Path::new("UI")); 
+          let _ui_dir = fs::create_dir(&ui_path).unwrap(); 
+          create_mainelm_file(&ui_path); 
+          // main_file.write_all().unwrap();
+
         },
         Err(_) => {
           println!("Could not create dir {:?}", &new_app.app_location);} 
@@ -60,13 +82,5 @@ fn main() {
       println!("Will create new fastapi feature"); 
     }
   }
-  // std::
-  // if args.use_graphql {
-  //   println!("Will generate a graphql setup..."); 
-  // }
-  // println!("Will generate Postgresql [test, dev] database"); 
-  // println!("Will generate an Elm project with tailwindcss");
-  // if opt.generate_elm_routes {
-  //   println!("Will generate elm route")
-  // }
+
 }
