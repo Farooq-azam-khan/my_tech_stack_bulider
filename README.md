@@ -2,6 +2,18 @@
 * a cli app for ease of web development
 * automatically implements boilerplate code that can easily be integrated to the project
 
+mock out question for new project init
+`mts init`
+* is it a full stack app?
+    * do you want to use hasura?
+        * does your app need auth?
+    * do you want to use elm?
+        * is it a multi page app or single page?
+        * do you want to use ts interop?
+        * do you want to use elm graphql?
+        * do you want to use tailwindcss?
+
+
 
 ## Features 
 * [ ] `mts init` will clone the zip of this `https://github.com/Farooq-azam-khan/my_tech_stack_sample.git` down and unzip it

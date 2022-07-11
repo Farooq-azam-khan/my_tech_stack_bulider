@@ -1,8 +1,13 @@
-use std::path::PathBuf; 
 use structopt::StructOpt;
-use std::fs; 
-use std::path::Path; 
-use std::io::Write;
+use colored::Colorize;
+use std::fmt;
+
+use inquire::{
+    formatter::MultiOptionFormatter,
+    MultiSelect,
+    Select
+};
+
 
 #[derive(StructOpt, Debug)]
 #[structopt(name="my_tech_stack")]
@@ -14,72 +19,123 @@ struct MyTechStackArguments {
 #[derive(Debug, StructOpt)]
 pub enum Command {
   #[structopt(name = "init")]
-  Init(InitNewApplication), 
-  #[structopt(name = "generate_feature")]
-  NewFeature(NewFeatureArguments) 
-}
-
-#[derive(StructOpt, Debug)]
-pub struct NewFeatureArguments {
-  #[structopt(short, long)]
-  name: String 
+  Init(InitNewApplication)
 }
 
 #[derive(StructOpt, Debug)]
 pub struct InitNewApplication {
-  #[structopt(short, long, parse(from_os_str))]
-  app_location: PathBuf, 
-  #[structopt(long)]
-  use_graphql: bool, 
-  #[structopt(long)]
-  generate_elm_routes: bool 
 }
 
-fn create_mainpy_file(src_path: &Path) -> () {
-  let main_path = src_path.join(Path::new("main.py")); 
-  let mut main_file = fs::File::create(main_path).unwrap(); 
-  main_file.write_all(b"from fastapi import FastAPI\nfrom pydantic import BaseModel\nfrom fastapi.middleware.cors import CORSMiddleware\n\napp = FastAPI()\nclass User(BaseModel):\n\tusername: str\n\temail: str\n\tpassword: str\norigins = ['http://localhost',\n\t'http://localhost:8080'\n]\n\napp.add_middleware(CORSMiddleware,\n\tallow_origins=origins,\n\tallow_credentials=True,allow_methods=['*'],allow_headers=['*']\n)\n
-\n@app.get('/')\ndef main():\n\treturn 'hello world'").unwrap();
+#[derive(PartialEq)]
+enum AppType {
+    FullStackApp, 
+    StaticWebApp, 
+    ApiOnlyApp
 }
 
-fn create_mainelm_file(ui_path: &Path) -> () {
-
-  let main_elm_file_path = ui_path.join(Path::new("main.elm")); 
-  let mut elm_file = fs::File::create(&main_elm_file_path).unwrap(); 
-  elm_file.write_all(b"module Main where").unwrap();
+impl fmt::Display for AppType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AppType::FullStackApp => write!(f, "Full Stack App"), 
+            AppType::StaticWebApp => write!(f, "Static Web App"), 
+            AppType::ApiOnlyApp   => write!(f, "Api Only App"), 
+        }
+    }
 }
 
-fn initialize_new_application(new_app: &InitNewApplication) -> () {
-  println!("Will generate a new FastAPI project at {:?}", &new_app.app_location);
-      let result = fs::create_dir(&new_app.app_location);
+#[derive(Debug)]
+enum BackendTech {
+    Hasura, 
+    FastApi
+}
 
-      match result {
-        Ok(r) => {
-          println!("{:?}", r);
-          let src_path = new_app.app_location.as_path().join(Path::new("src")); 
-          let _src_foler = fs::create_dir(&src_path);
-          create_mainpy_file(&src_path); 
-          let ui_path = src_path.join(Path::new("UI")); 
-          let _ui_dir = fs::create_dir(&ui_path).unwrap(); 
-          create_mainelm_file(&ui_path); 
-          // main_file.write_all().unwrap();
+impl fmt::Display for BackendTech {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BackendTech::Hasura => write!(f, "Hasura"), 
+            BackendTech::FastApi => write!(f, "FastApi")
+        }
+    }
+}
 
-        },
-        Err(_) => {
-          println!("Could not create dir {:?}", &new_app.app_location);} 
-      }
+#[derive(Debug)]
+enum FrontendTech {
+    Elm
+}
+impl fmt::Display for FrontendTech {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FrontendTech::Elm => write!(f, "Elm")
+        }
+    }
+}
+
+fn parse_fullstack_choice(fs_choice: AppType) -> () {
+
+    let backend_types: Vec<BackendTech> = vec![BackendTech::Hasura, BackendTech::FastApi ]; 
+    let backend_type_ = Select::new("What type of bakcend framework would you like to use?", backend_types);
+    
+    let frontend_types: Vec<FrontendTech> = vec![FrontendTech::Elm]; 
+    let frontend_type_ = Select::new("What type of frontend framework would you like to use?", frontend_types);
+
+    let elm_options = vec!["elm/graphql", "elm/ts-interop", "page routing", "tailwindcss"];
+    let formatter: MultiOptionFormatter<&str> = &|a| format!("Selected {} different options", a.len());
+
+    let backend_feature_options = vec!["stripe", "auth"]; 
+    let backend_features_ = MultiSelect::new("What would you like in you backend setup?", backend_feature_options)
+                                        .with_formatter(formatter); 
+
+
+    match fs_choice  {
+        AppType::FullStackApp => {
+
+            let backend_features_list = backend_features_.prompt().unwrap(); 
+            let backend_type_ans = backend_type_.prompt().unwrap(); 
+            match backend_type_ans {
+                BackendTech::Hasura => {
+                    let frontend_type_ans = frontend_type_.prompt().unwrap(); 
+                    match frontend_type_ans {
+                        FrontendTech::Elm => {
+                            let ans = MultiSelect::new("What would you like in you Elm setup?", elm_options)
+                                        .with_formatter(formatter)
+                                        .prompt()
+                                        .unwrap();
+                            println!("{:?}", ans); 
+                        }
+                    }
+                println!("{}", format!("Hasura is supported").green()); 
+
+                },  
+                BackendTech::FastApi => {
+                    println!("{} {}", format!("FastApi").red(), format!("is not supported yet").red()); 
+                }
+            };
+
+                    }, 
+        AppType::StaticWebApp => {
+            println!("{}", format!("Static Web App generation not supported yet!").red()); 
+        }, 
+        AppType::ApiOnlyApp => {
+            let backend_features_list = backend_features_.prompt(); 
+            println!("{}", format!("Static Web App generation not supported yet!").red()); 
+        }
+    };
+}
+
+fn initialize_new_application(_new_app: &InitNewApplication) -> () {
+    let app_types: Vec<AppType> = vec![AppType::FullStackApp, AppType::StaticWebApp, AppType::ApiOnlyApp]; 
+    let app_type_ans = Select::new("What type of application are you tryping to build?", app_types).prompt(); 
+    parse_fullstack_choice(app_type_ans.unwrap()); 
+    
 }
 
 fn main() {
   let args = MyTechStackArguments::from_args(); 
-  print!("{:#?}", args); 
+  //print!("{:#?}", args); 
   match args.command {
     Command::Init(new_app) => {
       initialize_new_application(&new_app); 
     
-    }, 
-    Command::NewFeature(_new_feature) => {
-      println!("Will create new fastapi feature"); 
     }
   }
 
